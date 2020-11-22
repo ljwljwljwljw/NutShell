@@ -40,9 +40,9 @@ class CtrlSignalIO extends NutCoreBundle {
 }
 
 class DataSrcIO extends NutCoreBundle {
-  val src1 = Output(UInt(XLEN.W))
-  val src2 = Output(UInt(XLEN.W))
-  val imm  = Output(UInt(XLEN.W))
+  val src1 = Output(UInt((XLEN+1).W))
+  val src2 = Output(UInt((XLEN+1).W))
+  val imm  = Output(UInt((XLEN+1).W))
 }
 
 class RedirectIO extends NutCoreBundle {
@@ -74,14 +74,14 @@ class WriteBackIO extends NutCoreBundle {
   val rfWen = Output(Bool())
   val fpWen = Output(Bool())
   val rfDest = Output(UInt(5.W))
-  val rfData = Output(UInt(XLEN.W))
+  val rfData = Output(UInt((XLEN+1).W))
 }
 
 class CommitIO extends NutCoreBundle {
   val decode = new DecodeIO
   val isMMIO = Output(Bool())
   val intrNO = Output(UInt(XLEN.W))
-  val commits = Output(Vec(FuType.num, UInt(XLEN.W)))
+  val commits = Output(Vec(FuType.num, UInt((XLEN+1).W)))
 }
 
 class OOCommitIO extends NutCoreBundle with HasBackendConst{
@@ -95,11 +95,11 @@ class OOCommitIO extends NutCoreBundle with HasBackendConst{
 
 class FunctionUnitIO extends NutCoreBundle {
   val in = Flipped(Decoupled(new Bundle {
-    val src1 = Output(UInt(XLEN.W))
-    val src2 = Output(UInt(XLEN.W))
+    val src1 = Output(UInt((XLEN+1).W))
+    val src2 = Output(UInt((XLEN+1).W))
     val func = Output(FuOpType())
   }))
-  val out = Decoupled(Output(UInt(XLEN.W)))
+  val out = Decoupled(Output(UInt((XLEN+1).W)))
 }
 
 class ForwardIO extends NutCoreBundle {

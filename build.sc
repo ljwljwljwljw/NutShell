@@ -54,10 +54,19 @@ object FPU extends CrossSbtModule with HasChisel3 with HasChiselTests {
   def crossScalaVersion = "2.11.12"
 }
 
+
+object hardfloat extends CrossSbtModule with HasChisel3 {
+
+  def crossScalaVersion = "2.11.12"
+  override def millSourcePath = os.pwd / "berkeley-hardfloat"
+
+}
+
+
 object chiselModule extends CrossSbtModule with HasChisel3 with HasChiselTests with HasXsource211 with HasMacroParadise {
   def zincWorker = CustomZincWorkerModule
   def crossScalaVersion = "2.11.12"
 
-  override def moduleDeps = super.moduleDeps ++ Seq(FPU)
+  override def moduleDeps = super.moduleDeps ++ Seq(FPU, hardfloat)
 }
 
