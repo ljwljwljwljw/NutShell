@@ -21,10 +21,11 @@ import chisel3.util._
 import chisel3.util.experimental.BoringUtils
 import utils._
 import bus.simplebus._
+import freechips.rocketchip.tile.HasFPUParameters
 import nutcore.fu.{FPU, FpuCsrIO}
 import top.Settings
 
-class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
+class EXU(implicit val p: NutCoreConfig) extends NutCoreModule with HasFPUParameters{
   val io = IO(new Bundle {
     val in = Flipped(Decoupled(Vec(2, new DecodeIO)))
     val out = Decoupled(Vec(2, new CommitIO))
@@ -62,7 +63,10 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
   val lsu = Module(new UnpipelinedLSU)
   val lsuTlbPF = WireInit(false.B)
   val lsuOut = lsu.access(valid = fuValids(FuType.lsu), src1 = src1, src2 = io.in.bits(0).data.imm, func = fuOpType, dtlbPF = lsuTlbPF)
-  lsu.io.wdata := src2
+  Debug(flag = false, cond = lsu.io.in.fire()){
+    printf(p"store src2: ${Hexadecimal(io.in.bits(0).data.src2)}\n")
+  }
+  lsu.io.wdata := Mux(io.in.bits(0).ctrl.src2Type === SrcType.fp, ieee(io.in.bits(0).data.src2), src2)
   lsu.io.instr := io.in.bits(0).cf.instr
   io.out.bits(0).isMMIO := lsu.io.isMMIO || (AddressSpace.isMMIO(io.in.bits(0).cf.pc) && io.out.valid)
   io.dmem <> lsu.io.dmem

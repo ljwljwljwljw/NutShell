@@ -19,11 +19,11 @@ package nutcore
 import chisel3._
 import chisel3.util._
 import chisel3.util.experimental.BoringUtils
-
+import freechips.rocketchip.tile.HasFPUParameters
 import utils._
 
 // Sequential Inst Issue Unit 
-class ISU(implicit val p: NutCoreConfig) extends NutCoreModule with HasRegFileParameter {
+class ISU(implicit val p: NutCoreConfig) extends NutCoreModule with HasRegFileParameter with HasFPUParameters{
   val io = IO(new Bundle {
     val in = Vec(2, Flipped(Decoupled(new DecodeIO)))
     val out = Decoupled(Vec(2, new DecodeIO))
@@ -143,7 +143,7 @@ class ISU(implicit val p: NutCoreConfig) extends NutCoreModule with HasRegFilePa
 
     difftestFpr.zipWithIndex.foreach{
       case (d, i) =>
-        d := fpr.read(i.U)
+        d := ieee(fpr.read(i.U))
     }
 
     val wb = io.wb(0)
@@ -152,6 +152,9 @@ class ISU(implicit val p: NutCoreConfig) extends NutCoreModule with HasRegFilePa
 
     val forwardFpWen = forward.valid && forward.wb.fpWen
     when(wb.fpWen){
+      Debug(){
+        printf(p"wdata: ${Hexadecimal(wb.rfData)} dest:${Hexadecimal(wb.rfDest)}\n")
+      }
       fpr.write(wb.rfDest, wb.rfData)
     }
 
@@ -177,7 +180,7 @@ class ISU(implicit val p: NutCoreConfig) extends NutCoreModule with HasRegFilePa
       in.bits.ctrl.src3Type
     ))
 
-    val dataVec = Array.fill(3)(Wire(UInt(XLEN.W)))
+    val dataVec = Array.fill(3)(Wire(UInt((XLEN+1).W)))
 
     val rdyVec = srcTuple.zipWithIndex.map({
       case ((src, t), i) =>

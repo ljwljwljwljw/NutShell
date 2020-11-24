@@ -8,6 +8,7 @@ import fpu.FPUIOFunc._
 import fpu.divsqrt.DivSqrt
 import fpu.fma.FMA
 import nutcore._
+import freechips.rocketchip.tile._
 
 class FpInstr extends NutCoreBundle {
   val func5 = UInt(5.W)
