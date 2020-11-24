@@ -1,72 +1,87 @@
+import os.Path
 import mill._
+import mill.modules.Util
+import $ivy.`com.lihaoyi::mill-contrib-buildinfo:$MILL_VERSION`
+import $ivy.`com.lihaoyi::mill-contrib-bsp:$MILL_VERSION`
+import mill.contrib.buildinfo.BuildInfo
 import scalalib._
 import coursier.maven.MavenRepository
-import os.Path
 
 object CustomZincWorkerModule extends ZincWorkerModule {
   def repositories() = super.repositories ++ Seq(
-    MavenRepository("https://oss.sonatype.org/content/repositories/releases"),
-    MavenRepository("https://oss.sonatype.org/content/repositories/snapshots")
-  )  
+    MavenRepository("https://maven.aliyun.com/repository/public"),
+    MavenRepository("https://maven.aliyun.com/repository/apache-snapshots")
+  )
 }
 
-/**
- * Scala 2.12 module that is source-compatible with 2.11.
- * This is due to Chisel's use of structural types. See
- * https://github.com/freechipsproject/chisel3/issues/606
- */
-trait HasXsource211 extends ScalaModule {
-  override def scalacOptions = T {
-    super.scalacOptions() ++ Seq(
-      "-deprecation",
-      "-unchecked",
-      "-Xsource:2.11"
-    )
-  }
+trait CommonModule extends ScalaModule {
+  override def scalaVersion = "2.12.10"
+
+  override def scalacOptions = Seq("-Xsource:2.11")
+
+  override def zincWorker = CustomZincWorkerModule
+
+  private val macroParadise = ivy"org.scalamacros:::paradise:2.1.0"
+
+  override def compileIvyDeps = Agg(macroParadise)
+
+  override def scalacPluginIvyDeps = Agg(macroParadise)
 }
 
-trait HasChisel3 extends ScalaModule {
-  override def ivyDeps = Agg(
-    ivy"edu.berkeley.cs::chisel3:3.3.2"
- )
+val chisel = Agg(
+  ivy"edu.berkeley.cs::chisel3:3.4.0"
+)
+
+object `api-config-chipsalliance` extends CommonModule {
+  override def millSourcePath = super.millSourcePath / "design" / "craft"
 }
 
-trait HasChiselTests extends CrossSbtModule  {
-  object test extends Tests {
-    override def ivyDeps = Agg(
-      ivy"org.scalatest::scalatest:3.0.4",
-      ivy"edu.berkeley.cs::chisel-iotesters:1.2+",
-      ivy"edu.berkeley.cs::chiseltest:0.2.1"
-    )
-    def testFrameworks = Seq("org.scalatest.tools.Framework")
-  }
-}
-
-trait HasMacroParadise extends ScalaModule {
-  // Enable macro paradise for @chiselName et al
-  val macroPlugins = Agg(ivy"org.scalamacros:::paradise:2.1.0")
-  def scalacPluginIvyDeps = macroPlugins
-  def compileIvyDeps = macroPlugins
-}
-
-object FPU extends CrossSbtModule with HasChisel3 with HasChiselTests {
-  override def millSourcePath = super.millSourcePath / 'FPU
-  def crossScalaVersion = "2.11.12"
-}
-
-
-object hardfloat extends CrossSbtModule with HasChisel3 {
-
-  def crossScalaVersion = "2.11.12"
+object hardfloat extends SbtModule with CommonModule {
   override def millSourcePath = os.pwd / "berkeley-hardfloat"
+  override def ivyDeps = super.ivyDeps() ++ chisel
+}
+
+object `rocket-chip` extends SbtModule with CommonModule {
+
+  override def ivyDeps = super.ivyDeps() ++ Agg(
+    ivy"${scalaOrganization()}:scala-reflect:${scalaVersion()}",
+    ivy"org.json4s::json4s-jackson:3.6.1"
+  ) ++ chisel
+
+  object macros extends SbtModule with CommonModule
+
+  override def moduleDeps = super.moduleDeps ++ Seq(
+    `api-config-chipsalliance`, macros, hardfloat
+  )
 
 }
 
-
-object chiselModule extends CrossSbtModule with HasChisel3 with HasChiselTests with HasXsource211 with HasMacroParadise {
-  def zincWorker = CustomZincWorkerModule
-  def crossScalaVersion = "2.11.12"
-
-  override def moduleDeps = super.moduleDeps ++ Seq(FPU, hardfloat)
+object FPU extends CommonModule with SbtModule {
+  override def ivyDeps = super.ivyDeps() ++ chisel
 }
 
+object chiselModule extends CommonModule with SbtModule {
+  override def millSourcePath = millOuterCtx.millSourcePath
+
+  override def forkArgs = Seq("-Xmx10G")
+
+  override def ivyDeps = super.ivyDeps() ++ chisel
+  override def moduleDeps = super.moduleDeps ++ Seq(
+    `rocket-chip`, FPU
+  )
+
+  object test extends Tests {
+    override def ivyDeps = super.ivyDeps() ++ Agg(
+      ivy"org.scalatest::scalatest:3.2.0"
+    )
+
+    def testFrameworks = Seq(
+      "org.scalatest.tools.Framework"
+    )
+
+    def testOnly(args: String*) = T.command {
+      super.runMain("org.scalatest.tools.Runner", args: _*)
+    }
+  }
+
+}
