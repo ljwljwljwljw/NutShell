@@ -139,7 +139,7 @@ class ISU(implicit val p: NutCoreConfig) extends NutCoreModule with HasRegFilePa
   val (fpCanIssue, fpDataVec) =  if(HasFPU){
 
     val fsb = new ScoreBoard(hasZero = false)
-    val fpr = new RegFile(hasZero = false)
+    val fpr = new RegFile(hasZero = false, len = XLEN+1)
 
     difftestFpr.zipWithIndex.foreach{
       case (d, i) =>

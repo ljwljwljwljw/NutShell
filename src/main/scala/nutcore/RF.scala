@@ -26,10 +26,10 @@ trait HasRegFileParameter {
   val NRReg = 32
 }
 
-class RegFile(hasZero: Boolean = true) extends HasRegFileParameter with HasNutCoreParameter {
-  val rf = Mem(NRReg, UInt(XLEN.W))
+class RegFile(hasZero: Boolean = true, len: Int = 64) extends HasRegFileParameter with HasNutCoreParameter {
+  val rf = Mem(NRReg, UInt(len.W))
   def read(addr: UInt) : UInt = if(hasZero) Mux(addr === 0.U, 0.U, rf(addr)) else rf(addr)
-  def write(addr: UInt, data: UInt) = { rf(addr) := data(XLEN-1,0) }
+  def write(addr: UInt, data: UInt) = { rf(addr) := data(len-1,0) }
 } 
 
 class ScoreBoard(hasZero: Boolean = true) extends HasRegFileParameter {
