@@ -109,7 +109,7 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule with HasFPUParame
     (
       fpu.access( // fpu result
         fuValids(FuType.fpu),
-        src1, src2, io.in.bits(0).data.imm, io.in.bits(0).ctrl.fuOpType
+        io.in.bits(0).data.src1, io.in.bits(0).data.src2, io.in.bits(0).data.imm, io.in.bits(0).ctrl.fuOpType
       ),
       fpu.io.out.valid
     )
